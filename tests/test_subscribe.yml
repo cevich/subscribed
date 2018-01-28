@@ -1,0 +1,18 @@
+---
+
+- hosts: all
+  gather_facts: False  # unnecessary
+  vars_files:
+    - '{{ playbook_dir }}/test_vault.yml'
+
+  tasks:
+    - name: System is registered and subscribed
+      include_role:
+        name: cevich.subscribed
+      vars:
+        rhsm: '{{ _vault_rhsm }}'
+      when: rhsm | default({}, True) | length
+
+    - fail:
+        msg: "The rhsm_system_identity was not retrieved"
+      when: not rhsm_system_identity | default("", True) | trim | length

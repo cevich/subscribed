@@ -1,39 +1,66 @@
 ---
 
-- name: Input expectations are verified
-  assert:
-    that:
-        - 'rhsm | default("", True) | length or ansible_check_mode | default(False)'
-        - 'rhsm.username | default("", True) | trim | length or ansible_check_mode | default(False)'
-        - 'rhsm.password | default("", True) | trim | length or ansible_check_mode | default(False)'
-        - 'role_path | is_dir'
-        - 'unsubscribe | bool in [True, False]'
-        - 'rhsm_retries | int >= 1'
-        - 'rhsm_delay | int >= 0'
 
-- name: System is registered and subscribed
-  # Ansible-dependencies may not be installed yet!
-  raw: '{{ lookup("template", role_path ~ "/templates/sub-man-cmd.j2") | trim }}'
-  executable: "/bin/bash"  # Required to pass env. vars
-  # Don't show credentials in the command-line
-  environment:
-    RHSM_USERNAME: "{{ rhsm.username }}"
-    RHSM_PASSWORD: "{{ rhsm.password }}"
-    RHSM_BASEURL: "{{ rhsm.baseurl | default('', True) }}"
-    RHSM_SERVERURL: "{{ rhsm.serverurl | default('', True) }}"
-    RHSM_ORG: "{{ rhsm.org | default('') }}"
-  failed_when: result | failed and not result.stderr | search("already registered")
-  register: result
-  until: result | success
-  retries: "{{ rhsm_retries }}"
-  delay: "{{ rhsm_delay }}"
-  when: rhsm | default('', True) | length and
-        not ansible_check_mode | default(False)
+- include_tasks: get_id.yml
 
-- name: System is pinned to a specific release (no updates/installs past this version)
-  raw: "subscription-manager release --set={{ rhsm.release }}"
-  when: not rhsm.release | default("", True) | trim | length
+- block:
 
-- name: System is unsubscribed and de-registered
-  include_tasks: unsubscribe.yml
-  when: unsubscribe | bool
+    - name: Input expectations are verified
+      assert:
+        that:
+            - 'rhsm | default({}, True) | length or ansible_check_mode | default(False)'
+            - 'rhsm.username | default("", True) | trim | length or ansible_check_mode | default(False)'
+            - 'rhsm.password | default("", True) | trim | length or ansible_check_mode | default(False)'
+            - 'role_path | is_dir'
+            - 'unsubscribe | bool in [True, False]'
+            - 'rhsm_retries | int >= 1'
+            - 'rhsm_delay | int >= 0'
+
+    - name: System is registered and subscribed
+      # Ansible-dependencies may not be installed yet!
+      command: '{{ lookup("template", role_path ~ "/templates/sub-man-cmd.j2") | trim }}'
+      # Don't show credentials in the command-line
+      environment:
+        RHSM_USERNAME: "{{ rhsm.username }}"
+        RHSM_PASSWORD: "{{ rhsm.password }}"
+        RHSM_BASEURL: "{{ rhsm.baseurl | default('', True) }}"
+        RHSM_SERVERURL: "{{ rhsm.serverurl | default('', True) }}"
+        RHSM_ORG: "{{ rhsm.org | default('') }}"
+      failed_when: result | failed and not result.stderr | search("already registered")
+      no_log: True
+      register: result
+      until: result | success  # Sensitive to network hiccups
+      retries: "{{ rhsm_retries | int }}"
+      delay: "{{ rhsm_delay | int }}"
+      when: rhsm | default('', True) | length and
+            not ansible_check_mode | default(False)
+
+    - name: System is pinned to a specific release (no updates/installs past this version)
+      command: "subscription-manager release --set={{ rhsm.release }}"
+      register: result
+      until: result | success  # Sensitive to network hiccups
+      retries: "{{ rhsm_retries | int }}"
+      delay: "{{ rhsm_delay | int }}"
+      when: rhsm.release | default("", True) | trim | length
+
+  when: not unsubscribe | bool and
+        not rhsm_system_identity | default("", True) | trim | length
+
+- block:
+
+    - name: Input expectations are verified
+      assert:
+        that:
+            - 'unsubscribe | bool in [True, False]'
+
+    - name: System is unsubscribed, ignoring all errors and failures
+      # Ansible-dependencies may not be installed yet!
+      command: "subscription-manager unregister"
+      ignore_errors: True
+      failed_when: False  # Don't show red when unsubscribing an unsubscribed system
+      when: not ansible_check_mode | default(False)
+
+  when: unsubscribe | bool and
+        rhsm_system_identity | default("", True) | trim | length
+
+- include_tasks: get_id.yml

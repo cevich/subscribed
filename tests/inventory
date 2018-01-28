@@ -1,2 +1,1 @@
-localhost
-
+tester ansible_connection=docker ansible_host=tester ansible_user=root
