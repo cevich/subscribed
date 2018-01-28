@@ -1,0 +1,9 @@
+
+# Ansible bits
+*.retry
+
+# Test bits
+tests/path/
+
+# Created by travis
+ansible.cfg

@@ -1,0 +1,15 @@
+---
+
+rhsm:
+    username: '{{ mandatory }}'
+    password: '{{ mandatory }}'
+    baseurl:
+    serverurl:
+    insecure: False
+    release:
+    org:
+    force: False
+
+unsubscribe: False
+rhsm_retries: '3'
+rhsm_delay: '10'
