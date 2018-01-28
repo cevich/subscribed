@@ -1,5 +1,28 @@
 ---
-- hosts: localhost
-  remote_user: root
-  roles:
-    - cevich.subscribed
+
+- hosts: all
+
+  gather_facts: False  # Dependencies not installed yet
+
+  pre_tasks:
+     - name: RHEL system is registered and subscribed
+       include_role:
+         name: cevich.subscribed
+         private: True  # Don't share vars with entire play
+         vars_from: '{{ playbook_dir }}/tests/test_vault.yml'
+       vars:
+         rhsm: '{{ _vault_rhsm if _vault_rhsm is defined else rhsm | default({}, True) }}'
+       when: rhsm | default({}, True) | length
+
+  tasks:
+    - command: subscription-manager status
+
+    #...important and useful things happen...
+
+  post_tasks:
+     - name: RHEL system is un-subscribed and de-registered
+       include_role:
+         name: cevich.subscribed
+         private: True
+         tasks_from: unsubscribe.yml
+       when: rhsm | default({}, True) | length

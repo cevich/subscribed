@@ -3,7 +3,7 @@
 - name: Input expectations are verified
   assert:
     that:
-        - 'rhsm | default("", True) | length or ansible_check_mode | default(False)'
+        - 'rhsm | default({}, True) | length or ansible_check_mode | default(False)'
         - 'rhsm.username | default("", True) | trim | length or ansible_check_mode | default(False)'
         - 'rhsm.password | default("", True) | trim | length or ansible_check_mode | default(False)'
         - 'role_path | is_dir'
@@ -14,7 +14,8 @@
 - name: System is registered and subscribed
   # Ansible-dependencies may not be installed yet!
   raw: '{{ lookup("template", role_path ~ "/templates/sub-man-cmd.j2") | trim }}'
-  executable: "/bin/bash"  # Required to pass env. vars
+  args:
+    executable: "/bin/bash"  # Required to pass env. vars
   # Don't show credentials in the command-line
   environment:
     RHSM_USERNAME: "{{ rhsm.username }}"
@@ -32,6 +33,8 @@
 
 - name: System is pinned to a specific release (no updates/installs past this version)
   raw: "subscription-manager release --set={{ rhsm.release }}"
+  args:
+    executable: "/bin/bash"
   when: not rhsm.release | default("", True) | trim | length
 
 - name: System is unsubscribed and de-registered

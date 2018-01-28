@@ -1,9 +1,14 @@
 ---
+dist: trusty
+
+sudo: required
 
 language: python
+
 branch:
     only:
         - master
+
 python:
     - 2.7
 
@@ -15,10 +20,10 @@ git:
 
 before_install:
   - sudo apt-get update -qq
-  - pip install ansible==2.4
+  - pip install ansible==2.4 docker
 
 script:
-  - ./travis.sh
+  - ./.travis.sh
 
 notifications:
     webhooks: https://galaxy.ansible.com/api/v1/notifications/

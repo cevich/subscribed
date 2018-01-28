@@ -8,7 +8,8 @@
 - name: System is unsubscribed, ignoring all errors and failures
   # Ansible-dependencies may not be installed yet!
   raw: "subscription-manager unregister"
-  executable: "/bin/bash"
+  args:
+    executable: "/bin/bash"
   ignore_errors: True
   failed_when: False  # Don't show red when unsubscribing an unsubscribed system
   register: result
