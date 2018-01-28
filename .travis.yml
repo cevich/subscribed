@@ -1,0 +1,24 @@
+---
+
+language: python
+branch:
+    only:
+        - master
+python:
+    - 2.7
+
+matrix:
+    fast_finish: true
+
+git:
+    submodules: false
+
+before_install:
+  - sudo apt-get update -qq
+  - pip install ansible==2.4
+
+script:
+  - ./travis.sh
+
+notifications:
+    webhooks: https://galaxy.ansible.com/api/v1/notifications/

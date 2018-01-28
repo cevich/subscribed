@@ -1,0 +1,29 @@
+/usr/bin/subscription-manager
+   register
+   "--username=$RHSM_USERNAME"
+   "--password=$RHSM_PASSWORD"
+   "--auto-attach"
+
+{% if rhsm.insecure | default(False) %}
+    "--insecure"
+{% endif %}
+
+{% if rhsm.baseurl | default('', True) | trim | length %}
+    "--baseurl=$RHSM_BASEURL"
+{% endif %}
+
+{% if rhsm.serverurl | default('', True) | trim | length %}
+    "--serverurl=$RHSM_SERVERURL"
+{% endif %}
+
+{% if rhsm.org | default('', True) | trim | length %}
+    "--org=$RHSM_ORG"
+{% endif %}
+
+{% if rhsm.release | default('', True) | trim | length %}
+    "--release={{ rhsm.release | trim}}"
+{% endif %}
+
+{% if rhsm.force | default(False) %}
+    "--force"
+{% endif %}
