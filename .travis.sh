@@ -14,16 +14,21 @@ ROLENAME="$(basename $PWD)"
 echo "$ROLENAME" | grep -q 'cevich' || ln -sfv "$ROLENAME" "../cevich.$ROLENAME"
 
 TYPOS="${PR_TYPOS}"
-[ "${TRAVIS_BRANCH:-master}" != "master" ] || TYPOS="${PR_TYPOS} | ${BR_TYPOS}"
+if [ "${TRAVIS_BRANCH:-master}" == "master" ]
+then
+    TYPOS="${PR_TYPOS} | ${BR_TYPOS}"
+    ANCESTOR=$(git merge-base origin/master HEAD)
+else
+    ANCESTOR=$(git merge-base origin/$TRAVIS_BRANCH HEAD)
+fi
 TYPOS=$(echo "$TYPOS" | tr -d ' -')
 
-ANCESTOR=$(git merge-base origin/master HEAD)
 [ $ANCESTOR != $(git rev-parse HEAD) ] || ANCESTOR="HEAD^"
 
 echo "Checking against ${ANCESTOR} for conflict and whitespace problems:"
 git diff --check ${ANCESTOR}..HEAD  # Silent unless problem detected
 
-git log -p ${ANCESTOR}..HEAD -- . &> /tmp/commits_with_diffs
+git log -p ${ANCESTOR}..HEAD -- . ':!.travis.yml' &> /tmp/commits_with_diffs
 LINES=$(wc -l </tmp/commits_with_diffs)
 if (( $LINES == 0 ))
 then

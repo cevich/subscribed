@@ -1,0 +1,16 @@
+---
+
+- hosts: all
+  gather_facts: False  # unnecessary
+
+  tasks:
+    - name: System is un-subscribed and de-registered
+      include_role:
+        name: cevich.subscribed
+        private: True
+      vars:
+        unsubscribe: True
+
+    - fail:
+        msg: "The rhsm_system_identity was not cleared"
+      when: rhsm_system_identity | default("", True) | trim | length

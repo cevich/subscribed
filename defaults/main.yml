@@ -1,8 +1,8 @@
 ---
 
 rhsm:
-    username: '{{ mandatory }}'
-    password: '{{ mandatory }}'
+    username:
+    password:
     baseurl:
     serverurl:
     insecure: False
