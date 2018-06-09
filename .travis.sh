@@ -2,8 +2,7 @@
 
 set -e
 
-PR_TYPOS="ec-oh | ro-el | fi-x.?me"
-BR_TYPOS="fi-x.?up! | squa-sh! | do.*not.*me-rge"
+source ./.typos.sh
 
 # Add ansible.cfg to pick up roles path.
 echo -e '[defaults]\nroles_path = ../' > ansible.cfg
@@ -13,31 +12,58 @@ echo -e '[defaults]\nroles_path = ../' > ansible.cfg
 ROLENAME="$(basename $PWD)"
 echo "$ROLENAME" | grep -q 'cevich' || ln -sfv "$ROLENAME" "../cevich.$ROLENAME"
 
-TYPOS="${PR_TYPOS}"
-if [ "${TRAVIS_BRANCH:-master}" == "master" ]
-then
-    TYPOS="${PR_TYPOS} | ${BR_TYPOS}"
-    ANCESTOR=$(git merge-base origin/master HEAD)
-else
-    ANCESTOR=$(git merge-base origin/$TRAVIS_BRANCH HEAD)
-fi
-TYPOS=$(echo "$TYPOS" | tr -d ' -')
+echo "Configuring vault"
+export ANSIBLE_VAULT_PASSWORD_FILE=$(mktemp -p '' .XXXXXXXX)
+export OUTPUT_TEMP_FILE=$(mktemp -p '' .XXXXXXXX)
 
-[ $ANCESTOR != $(git rev-parse HEAD) ] || ANCESTOR="HEAD^"
+cleanup(){
+    set +e
+    [ -r "$ANSIBLE_VAULT_PASSWORD_FILE" ] && rm -rf "$ANSIBLE_VAULT_PASSWORD_FILE"
+    [ -r "$OUTPUT_TEMP_FILE" ] && rm -rf "$OUTPUT_TEMP_FILE"
+    docker exec -i tester /usr/sbin/subscription-manager unregister || true
+}
+trap cleanup EXIT
 
-echo "Checking against ${ANCESTOR} for conflict and whitespace problems:"
-git diff --check ${ANCESTOR}..HEAD  # Silent unless problem detected
+(
+    set +abefhkmnptuvxBCEHPT
+    echo "$ANSIBLE_VAULT_PASSWORD" > "$ANSIBLE_VAULT_PASSWORD_FILE"
+) &>/dev/null
+unset -v ANSIBLE_VAULT_PASSWORD
 
-git log -p ${ANCESTOR}..HEAD -- . ':!.travis.yml' &> /tmp/commits_with_diffs
-LINES=$(wc -l </tmp/commits_with_diffs)
-if (( $LINES == 0 ))
-then
-    echo "FATAL: no changes found since ${ANCESTOR}"
-    exit 3
-fi
+echo "Setting up testing container"
+cat << EOF | sudo docker build -t tester:latest -
+FROM docker.io/centos:latest
+RUN yum update -y && \
+    yum install -y epel-release && \
+    yum install -y subscription-manager && \
+    yum clean all
+EOF
 
-echo "Examining $LINES change lines for typos:"
-set +e
-egrep -a -i -2 --color=always "$TYPOS" /tmp/commits_with_diffs && exit 3
+docker rm -f tester || true
+CID=$(sudo docker run --detach --entrypoint /usr/bin/sleep --name "tester" tester:latest 10m)
+echo "Started $CID"
 
-source ./.travis_test.sh
+echo "Testing subscribe syntax"
+ansible-playbook -i tests/inventory tests/test_subscribe.yml --verbose --syntax-check
+
+echo "Testing subscription functionality"
+ansible-playbook -i tests/inventory tests/test_subscribe.yml --verbose
+
+echo "Testing subscription idempotence based on functionality test"
+ansible-playbook -i tests/inventory tests/test_subscribe.yml --verbose | tee "$OUTPUT_TEMP_FILE"
+grep -q 'changed=0.*failed=0'  "$OUTPUT_TEMP_FILE" \
+    && (echo 'Subscription Idempotence test: pass' && exit 0) \
+    || (echo 'Subscription Idempotence test: fail' && exit 1)
+
+
+echo "Testing unsubscribe syntax"
+ansible-playbook -i tests/inventory tests/test_unsubscribe.yml --verbose --syntax-check
+
+echo "Testing unsubscription functionality"
+ansible-playbook -i tests/inventory tests/test_unsubscribe.yml --verbose
+
+echo "Testing unsubscription idempotence based on functionality test"
+ansible-playbook -i tests/inventory tests/test_unsubscribe.yml --verbose | tee "$OUTPUT_TEMP_FILE"
+grep -q 'changed=0.*failed=0'  "$OUTPUT_TEMP_FILE" \
+    && (echo 'Idempotence test: pass' && exit 0) \
+    || (echo 'Idempotence test: fail' && exit 1)
