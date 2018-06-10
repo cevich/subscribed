@@ -1,26 +1,19 @@
 ---
-dist: trusty
 
 sudo: required
-
 language: python
-
+python:
+    - 2.7
 branch:
     only:
         - master
-
-python:
-    - 2.7
-
-matrix:
-    fast_finish: true
-
-git:
-    submodules: false
+services:
+    - docker
 
 before_install:
   - sudo apt-get update -qq
-  - pip install ansible>=2.4 docker
+  - sudo apt-get install -qq realpath
+  - pip install ansible>=2.3
 
 script:
   - ./.travis.sh

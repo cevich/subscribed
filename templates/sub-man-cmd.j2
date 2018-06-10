@@ -4,7 +4,7 @@
    "--password=$RHSM_PASSWORD"
    "--auto-attach"
 
-{% if rhsm.insecure | default(False) %}
+{% if rhsm.insecure | default(False) | bool %}
     "--insecure"
 {% endif %}
 
@@ -24,6 +24,6 @@
     "--release={{ rhsm.release | trim}}"
 {% endif %}
 
-{% if rhsm.force | default(False) %}
+{% if rhsm.force | default(False) | bool %}
     "--force"
 {% endif %}

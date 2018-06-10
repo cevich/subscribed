@@ -11,5 +11,5 @@ rhsm:
     force: False
 
 unsubscribe: False
-rhsm_retries: '3'
-rhsm_delay: '10'
+rhsm_retries: '5'
+rhsm_delay: '60'

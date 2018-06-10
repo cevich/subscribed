@@ -4,7 +4,7 @@
 - name: The system's identity ID is collected
   shell: "subscription-manager identity | head -1 | awk '{print $3}'"
   register: result
-  until: result | success  # Sensitive to network hiccups
+  until: result is success  # Sensitive to network hiccups
   retries: "{{ rhsm_retries | int }}"
   delay: "{{ rhsm_delay | int }}"
   changed_when: False  # Data-retrieval only
