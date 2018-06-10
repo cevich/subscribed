@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -ex
 
 PR_TYPOS="ec-oh | ro-el | fi-x.?me"
 BR_TYPOS="fi-x.?up! | squa-sh! | do.*not.*me-rge"
@@ -24,5 +24,6 @@ then
     exit 3
 fi
 echo "Examining $LINES change lines for typos:"
-set +e
+set +e  # no match==good but will exit 1
 egrep -a -i -2 --color=always "$TYPOS" /tmp/commits_with_diffs && exit 3
+exit 0

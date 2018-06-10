@@ -26,10 +26,9 @@
         RHSM_BASEURL: "{{ rhsm.baseurl | default('', True) }}"
         RHSM_SERVERURL: "{{ rhsm.serverurl | default('', True) }}"
         RHSM_ORG: "{{ rhsm.org | default('') }}"
-      failed_when: result | failed and not result.stderr | search("already registered")
-      no_log: True
+      failed_when: result is failed and not result.stderr | search("already registered")
       register: result
-      until: result | success  # Sensitive to network hiccups
+      until: result is success  # Sensitive to network hiccups
       retries: "{{ rhsm_retries | int }}"
       delay: "{{ rhsm_delay | int }}"
       when: rhsm | default('', True) | length and
@@ -38,7 +37,7 @@
     - name: System is pinned to a specific release (no updates/installs past this version)
       command: "subscription-manager release --set={{ rhsm.release }}"
       register: result
-      until: result | success  # Sensitive to network hiccups
+      until: result is success  # Sensitive to network hiccups
       retries: "{{ rhsm_retries | int }}"
       delay: "{{ rhsm_delay | int }}"
       when: rhsm.release | default("", True) | trim | length
