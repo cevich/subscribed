@@ -1,24 +1,23 @@
 ---
 
+- name: The rhsm_system_identity fact is cleared before retrieval
+  set_fact:
+    rhsm_system_identity:
 
 - name: The system's identity ID is collected
   shell: "subscription-manager identity | head -1 | awk '{print $3}'"
   register: result
-  until: result is success  # Sensitive to network hiccups
+  # This can fail due to networking hiccups, or (worse) it may
+  # exit successfully, but report an SSL Verification failure.
+  until: result is success and
+         (result.stdout | trim | length or
+          result.stderr | search ('not yet registered'))
   retries: "{{ rhsm_retries | int }}"
   delay: "{{ rhsm_delay | int }}"
   changed_when: False  # Data-retrieval only
 
-- name: The system's identity ID is buffered as rhsm_system_identity
+- name: The system's identity ID is buffered as rhsm_system_identity when valid
   set_fact:
     rhsm_system_identity: '{{ result.stdout_lines[0] }}'
-  when: not result.stderr | search ('This system is not yet registered')
-
-- name: The unregistered system's identity ID is cleared in rhsm_system_identity
-  set_fact:
-    rhsm_system_identity:
-  when: result.stderr | search ('This system is not yet registered')
-
-- name: The system's identity ID is debugged
-  debug:
-    var: rhsm_system_identity
+  when: not result.stderr | search ('not yet registered') and
+        result.stdout | trim | length
