@@ -4,7 +4,9 @@ set -eo pipefail
 
 cd $(dirname $0)
 
-[[ -z "$CI" ]] || ./.typos.sh
+curl -O https://raw.githubusercontent.com/cevich/ADEPT/master/.travis_typo_check.sh
+chmod +x ./.travis_typo_check.sh
+[[ -z "$CI" ]] || ./.travis_typo_check.sh
 
 export CONTAINER="${CONTAINER:-docker}"
 
