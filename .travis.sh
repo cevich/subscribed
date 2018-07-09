@@ -26,6 +26,11 @@ cleanup(){
 trap cleanup EXIT
 
 cd tests
+mkdir -p roles
+cd roles
+ln -s ../../ cevich.subscribed
+cd ..
+
 export ANSIBLE_CONFIG="$PWD/ansible.cfg"
 cat << EOF > ansible.cfg
 [defaults]
